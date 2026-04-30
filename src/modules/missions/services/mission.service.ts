@@ -1,5 +1,10 @@
 import { createMissionRequest } from "../dtos/mission.dto.js";
-import { addMission, getMission } from "../repositories/mission.repository.js";
+import {
+  addMission,
+  getMission,
+  addMemberMission,
+  getMemberMission,
+} from "../repositories/mission.repository.js";
 
 // 미션 추가
 export const createMission = async (
@@ -18,4 +23,19 @@ export const createMission = async (
 
   const mission = await getMission(missionId);
   return mission;
+};
+
+// 도전 중인 미션에 추가
+export const createMemberMission = async (
+  userId: number,
+  missionId: number,
+) => {
+  const memberMissionId = await addMemberMission(userId, missionId);
+
+  if (memberMissionId === null) {
+    throw new Error("");
+  }
+
+  const memberMission = await getMemberMission(memberMissionId);
+  return memberMission;
 };
