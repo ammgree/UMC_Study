@@ -11,7 +11,7 @@ export const handleCreateReview = async (
   console.log("리뷰 작성을 요청했습니다!");
   console.log("body: ", req.body);
 
-  const userId = 4;
+  const userId = 2;
   const storeId = 1;
   const review = await createReview(userId, storeId, req.body);
 
