@@ -1,7 +1,18 @@
-import { Body, Controller, Response, Post, Route, Tags, Res } from "tsoa";
+import {
+  Body,
+  Controller,
+  Response,
+  Post,
+  Route,
+  Tags,
+  Middlewares,
+} from "tsoa";
 import { createMission } from "../services/mission.service.js";
 import { createMissionRequest } from "../dtos/mission.dto.js";
 import { ApiResponse, success } from "../../../common/response/response.js";
+import passport from "passport";
+
+const isLogin = passport.authenticate("jwt", { session: false });
 
 @Route("missions")
 @Tags("Missions")
@@ -10,6 +21,7 @@ export class MissionController extends Controller {
    * @summary 가게에 미션을 추가합니다.
    */
   @Post()
+  @Middlewares(isLogin)
   @Response<ApiResponse<null>>(200, "가게에 미션 추가 성공")
   @Response<ApiResponse<null>>(400, "잘못된 요청")
   public async handleCreateMission(
