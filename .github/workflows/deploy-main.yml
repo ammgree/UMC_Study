@@ -27,7 +27,7 @@ jobs:
         env:
           EC2_DOT_ENV: ${{ secrets.EC2_DOT_ENV }}
       - name: Generate + Build # Prisma Client 생성 + dist로 변환
-        run: npx prisma generate&&npm run build
+        run: npm run build
       - name: Prune devDependencies (runtime) + Regenerate # 다시 generate
         run: |
           npm prune --omit=dev
