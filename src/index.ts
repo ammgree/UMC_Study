@@ -104,7 +104,7 @@ app.listen(port, () => {
 
 // 1. TSOA가 생성한 swagger.json 읽어오기
 const swaggerFile = JSON.parse(
-  fs.readFileSync(path.resolve("dist/swagger.json"), "utf8"),
+  fs.readFileSync(path.join(process.cwd(), "dist/swagger.json"), "utf8"),
 );
 
 // 2. Swagger UI 연결
