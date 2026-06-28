@@ -10,29 +10,29 @@ jobs:
     runs-on: ubuntu-latest # CI/CD 파이프라인이 실행될 운영체제 환경을 지정
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # GitHub repo 코드 다운로드
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4 # Node.js 설치
         with:
           node-version: "24"
           cache: "npm"
 
-      - name: Install dependencies
+      - name: Install dependencies # package-lock.json 기준으로 node_modules 설치
         run: npm ci
-      - name: Inject environment variables
+      - name: Inject environment variables # .env 파일 생성
         run: |
           cat > .env <<'EOF'
           ${{ secrets.EC2_DOT_ENV}}
           EOF
         env:
           EC2_DOT_ENV: ${{ secrets.EC2_DOT_ENV }}
-      - name: Generate + Build
-        run: npx prisma generate&&npm run build
-      - name: Prune devDependencies (runtime) + Regenerate
+      - name: Generate + Build # Prisma Client 생성 + dist로 변환
+        run: npm run build
+      - name: Prune devDependencies (runtime) + Regenerate # 다시 generate
         run: |
           npm prune --omit=dev
           npx -p prisma prisma generate
-      - name: Pack artifact
+      - name: Pack artifact # 배포용 artifact 폴더 생성 + dist, node_modules, package.json, package-lock.json, prisma.config.ts, prisma 폴더를 artifact 폴더에 복사 + artifact.tgz 압축
         run: |
           mkdir -p artifact
           cp -r dist artifact/dist
@@ -40,7 +40,7 @@ jobs:
           cp package.json package-lock.json prisma.config.ts artifact/
           if [ -d prisma ]; then cp -r prisma artifact/prisma; fi
           tar -czf artifact.tgz -C artifact .
-      - name: Upload artiface
+      - name: Upload artifact # artifact.tgz를 GitHub Actions에 업로드 -> deploy job에서 다운로드 가능
         uses: actions/upload-artifact@v4
         with:
           name: app-artifact
@@ -49,16 +49,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Download artiface
+      - name: Download artifact # artifact.tgz를 GitHub Actions에서 다운로드
         uses: actions/download-artifact@v4
         with:
           name: app-artifact
           path: .
-      - name: Extract artifact
+      - name: Extract artifact # artifact.tgz 압축 해제
         run: |
           mkdir -p artifact
           tar -xzf artifact.tgz -C artifact
-      - name: Configure SSH
+      - name: Configure SSH # SSH 키를 GitHub Secrets에서 가져와서 EC2 서버에 접속할 수 있도록 설정
         run: |
           mkdir -p ~/.ssh
           echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
@@ -76,7 +76,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_PORT: ${{ secrets.EC2_PORT }}
           EC2_USER: ${{ secrets.EC2_USER }}
-      - name: Copy artifact to Server
+      - name: Copy artifact to Server # artifact 폴더를 EC2 서버의 /opt/app/umc10th/incoming 폴더로 복사
         run: |
           ssh target 'sudo mkdir -p /opt/app/umc10th/incoming&&sudo chown -R ubuntu:ubuntu /opt/app/umc10th'
           cd artifact
@@ -85,7 +85,7 @@ jobs:
             --exclude ".env" \
             ./dist ./prisma ./node_modules ./package.json ./package-lock.json prisma.config.ts \
             target:/opt/app/umc10th/incoming/
-      - name: Switch Environment
+      - name: Switch Environment # EC2 서버에서 incoming 폴더를 current 폴더로 변경
         run: |
           ssh target '
             set -e
@@ -93,14 +93,14 @@ jobs:
             rm -rf current
             mv incoming current
             '
-      - name: Create environment variables
+      - name: Create environment variables # EC2 서버에서 .env 파일 생성
         run: |
           ssh target "cat > /opt/app/umc10th/current/.env << 'EOF'
           ${{ secrets.EC2_DOT_ENV }}
           EOF"
         env:
           EC2_DOT_ENV: ${{ secrets.EC2_DOT_ENV }}
-      - name: Config systemd service file
+      - name: Config systemd service file # EC2 서버에서 systemd 서비스 파일 생성 및 서비스 시작
         run: |
           ssh target 'sudo systemctl unmask UMC_10th || true'
 
@@ -124,6 +124,6 @@ jobs:
           ssh target 'sudo systemctl enable UMC_10th'
           ssh target 'sudo systemctl restart UMC_10th'
 
-      - name: Check service status
+      - name: Check service status # EC2 서버에서 systemd 서비스 상태 확인
         run: |
           ssh target 'sudo systemctl status UMC_10th -l --no-pager'
