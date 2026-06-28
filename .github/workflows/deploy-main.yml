@@ -35,7 +35,7 @@ jobs:
       - name: Pack artifact
         run: |
           mkdir -p artifact
-          cp -r dist artiface/dist
+          cp -r dist artifact/dist
           cp -r node_modules artifact/node_modules
           cp package.json package-lock.json prisma.config.ts artifact/
           if [ -d prisma ]; then cp -r prisma artifact/prisma; fi
